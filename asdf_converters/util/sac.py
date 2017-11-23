@@ -21,7 +21,7 @@ def read_sac_files(files):
         except:
             print("\nFailed to read '%s' as a SAC file." % filename)
             continue
-        trace.sac_filename = filename
+        trace.stats.sac_filename = filename
         stream += _fromfile
 
     return stream
