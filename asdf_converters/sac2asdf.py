@@ -40,20 +40,26 @@ def sort_by_station(channels):
     return stations.items()
 
 
-def get_name(trace):
-    return '.'.join([
-        trace.stats.network,
-        trace.stats.station,
-        trace.stats.channel])
+def load(buffer, **kwds):
+    """Load an object that was stored as an ASDF auxiliary data file
+    """
+    import dill
+    from io import BytesIO
+    value = getattr(buffer, 'value', buffer)
+    return dill.load(BytesIO(value))
 
 
-def write_bytesio(data):
-    f = io.BytesIO()
-    _Pickler(f, protocol=None, fix_imports=fix_imports).dump(data)
-    return f.getvalue()
+def dump(object, **kwds):
+    """ Dumps an object to a dill virtual file
+    """
+    import dill
+    from io import BytesIO
+    file = BytesIO()
+    dill.dump(object, file)
+    file.seek(0)
+    return file
 
     
-
 
 # SAC2ASDF
 if __name__=='__main__':
@@ -78,9 +84,11 @@ if __name__=='__main__':
     endtime = -np.inf
 
     for trace in stream:
+        print(trace.stats.sac_filename)
+
         # keep track of headers
         sac_header = trace.stats.sac
-        sac_filename = trace.sac_filename
+        sac_filename = trace.stats.sac_filename
         headers[sac_filename] = sac_header
 
         # keep track of events
@@ -103,7 +111,6 @@ if __name__=='__main__':
         if e.timestamp > endtime:
             endtime = e
 
-        # add waveform
         ds.add_waveforms(trace, args.tag, event_id)
 
     # add events
@@ -149,8 +156,9 @@ if __name__=='__main__':
             ds.add_stationxml(inventory)
 
     # add sac_headers as auxiliary data
-    ds.add_auxiliary_data_file(write_bytesio(headers),
-       path='dummy_path')
+    ds.add_auxiliary_data_file(
+        dump(headers),
+        path='SacHeaders')
 
     del ds
 
