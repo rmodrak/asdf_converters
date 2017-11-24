@@ -1,4 +1,12 @@
 
+import argparse
+
+import numpy as np
+import obspy
+import pyasdf
+
+from os.path import exists, join
+
 
 def getargs():
     parser = argparse.ArgumentParser()
@@ -9,17 +17,21 @@ def getargs():
     parser.add_argument('output', type=str,
         help='ASDF output filename')
 
+    parser.add_argument('tag', type=str,
+        help='ASDF tag',
+        nargs='?',
+        default='converted_from_sac')
+
     return parser.parse_args()
 
 
-def read_bytesio():
-    raise NotImplementedError
-
-def get_data():
-    raise NotImplementedError
-
-def get_sac_headers():
-    raise NotImplementedError
+def load(buffer, **kwds):
+    """Load an object that was stored as an ASDF auxiliary data file
+    """
+    import dill
+    from io import BytesIO
+    value = getattr(buffer, 'value', buffer)
+    return dill.load(BytesIO(value))
 
 
 # ASDF2SAC
@@ -29,24 +41,34 @@ if __name__=='__main__':
     if not exists(args.input):
         raise Exception("File not found:." % args.input)
 
-    if exists(args.output):
-        raise Exception("File exists: %s" % args.output)
+    if not exists(args.output):
+        raise Exception("Directory not found: %s" % args.output)
 
-    ds = ASDFDataSet(args.input)
+    ds = pyasdf.ASDFDataSet(args.input)
 
-    # get data from ASDF files
-    stream = get_data(ds)
-    sac_headers = get_sac_headers(s)
-    del ds
+    # retrieve SAC headers from ASDF auxiliary data
+    headers = {}
+    if hasattr(ds.auxiliary_data.Files, 'SacHeaders'):
+        headers = load(ds.auxiliary_data.Files.SacHeaders.data)
 
-    for _i, trace in enumerate(stream):
-        # work around obspy data type conversion
-        trace.data = stream.data.astype(np.float32)
+    for station in ds.waveforms:
+        for trace in station[args.tag]:
 
-        # attach SAC header
-        trace.stats.sac = sac_headers[_i]
+            # retrieve SAC filename
+            try:
+                filename = trace.stats.asdf.labels[0]
+            except:
+                filename = "%s.SAC" % trace.id
+                warnings.warn(
+                    "Original SAC filename not stored in asdf.labels. "
+                    "Using trace.id instead:\n%s\n" % filename)
 
-        # write data
-        fullname = join(args.output, trace.sac_filename)
-        data.write(fullname, format='sac')
+            # attach SAC header
+            if filename in headers:
+                trace.stats.sac = headers[filename]
+
+            # write data
+            fullname = join(args.output, filename)
+            trace.write(fullname, format='sac')
+
 
