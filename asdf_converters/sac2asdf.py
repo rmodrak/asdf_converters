@@ -22,8 +22,10 @@ def getargs():
     parser.add_argument('output', type=str,
         help='ASDF output filename')
 
-    parser.add_argument('tag', type=str,
-        help='ASDF tag')
+    parser.add_argument('tag', type=str, 
+        help='ASDF tag',
+        nargs='?',
+        default='converted_from_sac')
 
     return parser.parse_args()
 
@@ -35,8 +37,8 @@ def get_event_id():
 def sort_by_station(channels):
     stations = collections.defaultdict(list)
     for trace_id, coords in channels.items():
-        network, station, location_code, channel = trace_id.split('.')
-        stations[(network, station)] += [(location_code, channel,) + coords]
+        network, station, location, channel = trace_id.split('.')
+        stations[(network, station)] += [(location, channel,) + coords]
     return stations.items()
 
 
@@ -84,11 +86,11 @@ if __name__=='__main__':
     endtime = -np.inf
 
     for trace in stream:
-        print(trace.stats.sac_filename)
+        print(trace.sac_filename)
 
         # keep track of headers
         sac_header = trace.stats.sac
-        sac_filename = trace.stats.sac_filename
+        sac_filename = trace.sac_filename
         headers[sac_filename] = sac_header
 
         # keep track of events
@@ -111,7 +113,7 @@ if __name__=='__main__':
         if e.timestamp > endtime:
             endtime = e
 
-        ds.add_waveforms(trace, args.tag, event_id)
+        ds.add_waveforms(trace, args.tag, event_id, labels=[sac_filename])
 
     # add events
     catalog = obspy.core.event.Catalog()
@@ -130,7 +132,7 @@ if __name__=='__main__':
     # add stations
     for group1, group2 in sort_by_station(channels):
         network, station = group1
-        for location_code, channel, latitude, longitude, depth, elevation in group2:
+        for location, channel, latitude, longitude, depth, elevation in group2:
             inventory = obspy.core.inventory.Inventory(
                 networks=[obspy.core.inventory.Network(
                     code=network, 
@@ -145,7 +147,7 @@ if __name__=='__main__':
                         site=obspy.core.inventory.Site(name=""),
                         channels=[obspy.core.inventory.Channel(
                             code=channel,
-                            location_code=location_code,
+                            location_code=location,
                             latitude=latitude,
                             longitude=longitude,
                             elevation=elevation,

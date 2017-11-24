@@ -3,7 +3,7 @@ import glob
 import os
 import warnings
 
-from os.path import join
+from os.path import basename, join
 
 import numpy as np
 import obspy
@@ -21,7 +21,11 @@ def read_sac_files(files):
         except:
             print("\nFailed to read '%s' as a SAC file." % filename)
             continue
-        trace.stats.sac_filename = filename
+
+        # keep track of original filename
+        # (does not survive conversion to ASDF)
+        trace.sac_filename = basename(filename)
+
         stream += _fromfile
 
     return stream
