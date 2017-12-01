@@ -54,7 +54,7 @@ if __name__=='__main__':
     args = getargs()
 
     if not exists(args.input):
-        raise Exception("File not found:." % args.input)
+        raise Exception("File not found: %s" % args.input)
 
     if exists(args.output):
         raise Exception("File exists: %s" % args.output)
