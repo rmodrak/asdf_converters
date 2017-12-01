@@ -25,6 +25,11 @@ def getargs():
         nargs='?',
         default='converted_from_su')
 
+    parser.add_argument('byteorder', type=str,
+        help='byteorder',
+        nargs='?',
+        default='<')
+
     return parser.parse_args()
 
 
@@ -49,9 +54,12 @@ if __name__=='__main__':
     for _i, waveforms in enumerate(ds.waveforms):
         trace = waveforms[args.tag][0]
         trace.stats.su = headers[_i]
+        print headers[_i]
         stream += trace
 
     # write data
-    stream.write(args.output, format='SU')
+    stream.write(args.output, 
+        format='SU', 
+        byteorder=args.byteorder)
 
 
