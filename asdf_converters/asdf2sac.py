@@ -1,11 +1,14 @@
 
 import argparse
+import warnings
 
 import numpy as np
 import obspy
 import pyasdf
 
 from os.path import exists, join
+
+from asdf_converters.util.util import loadjson
 
 
 def getargs():
@@ -25,15 +28,6 @@ def getargs():
     return parser.parse_args()
 
 
-def load(buffer, **kwds):
-    """Load an object that was stored as an ASDF auxiliary data file
-    """
-    import dill
-    from io import BytesIO
-    value = getattr(buffer, 'value', buffer)
-    return dill.load(BytesIO(value))
-
-
 # ASDF2SAC
 if __name__=='__main__':
     args = getargs()
@@ -49,7 +43,7 @@ if __name__=='__main__':
     # retrieve SAC headers from ASDF auxiliary data
     headers = {}
     if hasattr(ds.auxiliary_data.Files, 'SacHeaders'):
-        headers = load(ds.auxiliary_data.Files.SacHeaders.data)
+        headers = loadjson(ds.auxiliary_data.Files.SacHeaders.data)
 
     for station in ds.waveforms:
         for trace in station[args.tag]:

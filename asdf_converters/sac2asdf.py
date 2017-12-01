@@ -9,6 +9,7 @@ import obspy
 
 from os.path import exists, join
 from asdf_converters.util.sac import read_sac_files, get_event_coords, get_station_coords
+from asdf_converters.util.util import dumpjson
 from pyasdf import ASDFDataSet
 
 
@@ -35,6 +36,11 @@ def get_event_id():
 
 
 def sort_by_station(channels):
+    """
+    Takes a dictionary indexed by channel and reindexes it by station.
+    In the new dictionary, each key is a station and each value is a list of
+    channels.
+    """
     stations = collections.defaultdict(list)
     for trace_id, coords in channels.items():
         network, station, location, channel = trace_id.split('.')
@@ -42,26 +48,6 @@ def sort_by_station(channels):
     return stations.items()
 
 
-def load(buffer, **kwds):
-    """Load an object that was stored as an ASDF auxiliary data file
-    """
-    import dill
-    from io import BytesIO
-    value = getattr(buffer, 'value', buffer)
-    return dill.load(BytesIO(value))
-
-
-def dump(object, **kwds):
-    """ Dumps an object to a dill virtual file
-    """
-    import dill
-    from io import BytesIO
-    file = BytesIO()
-    dill.dump(object, file)
-    file.seek(0)
-    return file
-
-    
 
 # SAC2ASDF
 if __name__=='__main__':
@@ -91,7 +77,7 @@ if __name__=='__main__':
         # keep track of headers
         sac_header = trace.stats.sac
         sac_filename = trace.sac_filename
-        headers[sac_filename] = sac_header
+        headers[sac_filename] = dict(sac_header)
 
         # keep track of events
         coords = get_event_coords(sac_header)
@@ -159,8 +145,7 @@ if __name__=='__main__':
 
     # add sac_headers as auxiliary data
     ds.add_auxiliary_data_file(
-        dump(headers),
+        dumpjson(headers),
         path='SacHeaders')
-
     del ds
 
