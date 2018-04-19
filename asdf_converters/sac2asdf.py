@@ -60,7 +60,7 @@ if __name__=='__main__':
     if exists(args.output):
         raise Exception("File exists: %s" % args.output)
 
-    wildcard = '*.sac'
+    wildcard = '*'
     files = glob.glob(join(args.input, wildcard))
     stream = read_sac_files(files)
     ds = ASDFDataSet(args.output, mode='a')
